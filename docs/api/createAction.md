@@ -162,7 +162,7 @@ function someFunction(action: Action) {
 
 ### With redux-observable
 
-The `match` method can also be used as a filter method, which makes it powerful when used with redux-observable:
+The `match` method can also be used as a predicate for filter method, which makes it powerful when used with redux-observable:
 
 ```typescript
 const increment = createAction<number>('INCREMENT')

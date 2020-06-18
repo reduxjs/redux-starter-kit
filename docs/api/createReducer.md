@@ -63,7 +63,7 @@ createReducer(0, builder =>
 )
 ```
 
-This is intended for use with TypeScript, as passing a plain object full of reducer functions cannot infer their types correctly in this case. It has no real benefit when used with plain JS.
+This is intended for use with TypeScript, as passing a plain object full of reducer functions cannot infer the type of actions correctly in this case. It has no real benefit when used with plain JS.
 
 We recommend using this API if stricter type safety is necessary when defining reducer argument objects.
 

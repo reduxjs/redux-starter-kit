@@ -473,23 +473,6 @@ console.log(createPost({ id: 123, title: 'Hello World' }))
 
 `createSlice` looked at all of the functions that were defined in the `reducers` field, and for every "case reducer" function provided, generates an action creator that uses the name of the reducer as the action type itself. So, the `createPost` reducer became an action type of `"posts/createPost"`, and the `createPost()` action creator will return an action with that type.
 
-```js
-const postsSlice = createSlice({
-  name: 'posts',
-  initialState: [],
-  reducers: {
-    createPost(state, action) {},
-    updatePost(state, action) {},
-    deletePost(state, action) {}
-  }
-})
-
-const { createPost } = postsSlice.actions
-
-console.log(createPost({ id: 123, title: 'Hello World' }))
-// {type : "posts/createPost", payload : {id : 123, title : "Hello World"}}
-```
-
 ### Exporting and Using Slices
 
 Most of the time, you'll want to define a slice, and export its action creators and reducers. The recommended way to do this is using ES6 destructuring and export syntax:
