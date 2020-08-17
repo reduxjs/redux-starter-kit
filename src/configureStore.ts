@@ -17,14 +17,14 @@ import {
   composeWithDevTools,
   EnhancerOptions as DevToolsOptions
 } from './devtoolsExtension'
-
+import { storeDescriptionKey } from './curriedTypes'
 import isPlainObject from './isPlainObject'
 import {
   ThunkMiddlewareFor,
   curryGetDefaultMiddleware,
   CurriedGetDefaultMiddleware
 } from './getDefaultMiddleware'
-import { DispatchForMiddlewares } from './tsHelpers'
+import { DispatchForMiddlewares, ExtraFromMiddlewares } from './tsHelpers'
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
@@ -110,6 +110,12 @@ export interface EnhancedStore<
    * @inheritdoc
    */
   dispatch: DispatchForMiddlewares<M> & Dispatch<A>
+
+  [storeDescriptionKey]: {
+    RootState: S
+    Dispatch: DispatchForMiddlewares<M> & Dispatch<A>
+    ThunkExtraArgument: ExtraFromMiddlewares<M>
+  }
 }
 
 /**

@@ -81,10 +81,22 @@ export type DispatchForMiddlewares<M> = M extends ReadonlyArray<any>
     >
   : never
 
+export type ExtraFromMiddlewares<
+  MW extends ReadonlyArray<any>
+> = MW[number] extends infer M
+  ? M extends Middleware<infer DispatchExt, any, any>
+    ? DispatchExt extends (
+        _: (__: any, ___: any, ____: infer Extra) => any
+      ) => any
+      ? Extra
+      : never
+    : never
+  : never
+
 /**
  * Convert a Union type `(A|B)` to and intersecion type `(A&B)`
  */
-type UnionToIntersection<U> = (U extends any
+export type UnionToIntersection<U> = (U extends any
 ? (k: U) => void
 : never) extends (k: infer I) => void
   ? I

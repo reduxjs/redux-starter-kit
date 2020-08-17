@@ -6,20 +6,31 @@
 
 import { Action } from 'redux';
 import { ActionCreator } from 'redux';
+import { AdvancedComponentDecorator } from 'react-redux';
 import { AnyAction } from 'redux';
+import { ConnectOptions } from 'react-redux';
 import { default as createNextState } from 'immer';
 import { createSelector } from 'reselect';
 import { current } from 'immer';
 import { DeepPartial } from 'redux';
 import { Dispatch } from 'redux';
 import { Draft } from 'immer';
+import { InferableComponentEnhancer } from 'react-redux';
+import { InferableComponentEnhancerWithProps } from 'react-redux';
+import { MapDispatchToPropsNonObject } from 'react-redux';
+import { MapDispatchToPropsParam } from 'react-redux';
+import { MapStateToPropsParam } from 'react-redux';
+import { MergeProps } from 'react-redux';
 import { Middleware } from 'redux';
+import { Options } from 'react-redux';
 import { OutputParametricSelector } from 'reselect';
 import { OutputSelector } from 'reselect';
 import { ParametricSelector } from 'reselect';
 import { Reducer } from 'redux';
 import { ReducersMapObject } from 'redux';
+import { ResolveThunks } from 'react-redux';
 import { Selector } from 'reselect';
+import { SelectorFactory } from 'react-redux';
 import { Store } from 'redux';
 import { StoreEnhancer } from 'redux';
 import { ThunkAction } from 'redux-thunk';
@@ -170,7 +181,15 @@ export interface CreateSliceOptions<State = any, CR extends SliceCaseReducers<St
     reducers: ValidateSliceCaseReducers<State, CR>;
 }
 
+// @beta (undocumented)
+export const createThunk: <Args extends any[], R, State = unknown, Extra = unknown, Dispatch = ThunkDispatch<State, Extra, AnyAction>>(thunkActionCreator: ThunkActionCreator<Args, R, State, Extra, Dispatch>) => ThunkActionCreator<Args, R, State, Extra, Dispatch>;
+
 export { current }
+
+// @beta (undocumented)
+export function curryForStoreType<Store extends {
+    [storeDescriptionKey]: StoreDescription;
+}>(): CurryType<Store[typeof storeDescriptionKey]>;
 
 // @public (undocumented)
 export interface Dictionary<T> extends DictionaryNum<T> {
@@ -182,6 +201,12 @@ export { Draft }
 
 // @public
 export interface EnhancedStore<S = any, A extends Action = AnyAction, M extends Middlewares<S> = Middlewares<S>> extends Store<S, A> {
+    // (undocumented)
+    [storeDescriptionKey]: {
+        RootState: S;
+        Dispatch: DispatchForMiddlewares<M> & Dispatch<A>;
+        ThunkExtraArgument: ExtraFromMiddlewares<M>;
+    };
     dispatch: DispatchForMiddlewares<M> & Dispatch<A>;
 }
 

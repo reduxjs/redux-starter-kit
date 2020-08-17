@@ -105,5 +105,7 @@ export {
   unwrapResult,
   SerializedError
 } from './createAsyncThunk'
+export { createThunk } from './createThunk'
+export { curryForStoreType } from './curriedTypes'
 
 export { nanoid } from './nanoid'
