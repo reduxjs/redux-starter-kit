@@ -106,6 +106,14 @@ export {
   SerializedError
 } from './createAsyncThunk'
 
+export {
+  createActionListenerMiddleware,
+  addListenerAction,
+  removeListenerAction,
+  ActionListener,
+  ActionListenerMiddlewareAPI
+} from './createActionListenerMiddleware'
+
 export { nanoid } from './nanoid'
 
 export { default as isPlainObject } from './isPlainObject'
