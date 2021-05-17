@@ -35,7 +35,11 @@ import {
   QueryThunkArg,
   ThunkResult,
 } from './buildThunks'
-import { AssertTagTypes, EndpointDefinitions } from '../endpointDefinitions'
+import {
+  AssertTagTypes,
+  EndpointDefinitions,
+  QueryDefinition,
+} from '../endpointDefinitions'
 import { applyPatches, Patch } from 'immer'
 import { onFocus, onFocusLost, onOffline, onOnline } from './setupListeners'
 import {
@@ -130,10 +134,14 @@ export function buildSlice({
             meta.arg.queryCacheKey,
             (substate) => {
               if (substate.requestId !== meta.requestId) return
+              const { merge = (x: any) => x } = definitions[
+                meta.arg.endpointName
+              ] as QueryDefinition<any, any, any, any>
+
               substate.status = QueryStatus.fulfilled
               substate.data = copyWithStructuralSharing(
                 substate.data,
-                payload.result
+                merge(payload.result, substate.data)
               )
               delete substate.error
               substate.fulfilledTimeStamp = payload.fulfilledTimeStamp

@@ -147,6 +147,17 @@ export interface QueryExtraOptions<
    * Not to be used. A query should not invalidate tags in the cache.
    */
   invalidatesTags?: never
+  /**
+   * Can be provided to merge the current cache value into the new cache value.
+   *
+   * Useful if you don't want a new request to completely override the current cache value,
+   * maybe because you have manually updated it from another source and don't want those
+   * updates to get lost.
+   */
+  merge?(
+    newCacheValue: ResultType,
+    currentCacheValue: ResultType | undefined
+  ): ResultType
   /** @deprecated please use `onQuery` instead */
   onStart?(arg: QueryArg, queryApi: QueryApi<ReducerPath, any>): void
   /** @deprecated please use `onQuery` instead */
