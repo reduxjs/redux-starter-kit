@@ -129,7 +129,7 @@ export interface EnhancedStore<
 export function configureStore<
   S = any,
   A extends Action = AnyAction,
-  M extends Middlewares<S> = [ThunkMiddlewareFor<S>]
+  M extends Middlewares<S> = [ThunkMiddlewareFor<S, {}, A>]
 >(options: ConfigureStoreOptions<S, A, M>): EnhancedStore<S, A, M> {
   const curriedGetDefaultMiddleware = curryGetDefaultMiddleware<S>()
 

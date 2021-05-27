@@ -1,4 +1,4 @@
-import { Action, AnyAction, Reducer } from 'redux'
+import { Action, AnyAction, combineReducers, Reducer } from 'redux'
 import {
   ActionCreatorWithNonInferrablePayload,
   ActionCreatorWithOptionalPayload,
@@ -68,8 +68,12 @@ const value = actionCreators.anyKey
 
   /* Reducer */
 
-  const reducer: Reducer<number, PayloadAction> = slice.reducer
+  type InferredTypeActions = 'counter/increment' | 'counter/decrement'
 
+  const reducer: Reducer<number, PayloadAction<void, InferredTypeActions>> = slice.reducer
+
+  // @ts-expect-error
+  const stringTypeActionsReducer: Reducer<number, PayloadAction> = slice.reducer
   // @ts-expect-error
   const stringReducer: Reducer<string, PayloadAction> = slice.reducer
   // @ts-expect-error
@@ -82,6 +86,40 @@ const value = actionCreators.anyKey
 
   // @ts-expect-error
   slice.actions.other(1)
+}
+
+/*
+ * Test: createSlice() safetly type actions with combineReducers
+ */
+{
+  const firstAction = createAction<{ count: number }>('FIRST_ACTION')
+
+  const slice = createSlice({
+    name: 'counter',
+    initialState: 0,
+    reducers: {
+      increment: (state: number, action) => state + action.payload,
+      decrement: (state: number, action) => state - action.payload
+    },
+    extraReducers: {
+      [firstAction.type]: (state: number, action) =>
+        state + action.payload.count
+    }
+  })
+
+  /* Reducer */
+
+  const reducer = combineReducers({
+    counter: slice.reducer,
+  })
+
+  reducer({ counter: 0 }, { type: 'counter/decrement', payload: undefined })
+  reducer({ counter: 0 }, { type: 'counter/increment', payload: undefined })
+
+  // @ts-expect-error
+  reducer({ counter: 0 }, { type: 'decrement', payload: undefined })
+  // @ts-expect-error
+  reducer({ counter: 0 }, { type: 'any-string', payload: undefined })
 }
 
 /*
@@ -139,7 +177,7 @@ const value = actionCreators.anyKey
 }
 
 /*
- * Test: Slice action creator types properties are "string"
+ * Test: Slice action creator types properties are `${sliceName}/${reducerPropertyName}`
  */
 {
   const counter = createSlice({
@@ -159,10 +197,16 @@ const value = actionCreators.anyKey
   const t: string = counter.actions.decrement.type
   const u: string = counter.actions.multiply.type
 
+  const a: 'counter/increment' = counter.actions.increment.type
+  const b: 'counter/decrement' = counter.actions.decrement.type
+  const c: 'counter/multiply' = counter.actions.multiply.type
+
   // @ts-expect-error
-  const x: 'counter/increment' = counter.actions.increment.type
+  const x: 'increment' = counter.actions.increment.type
   // @ts-expect-error
-  const y: 'increment' = counter.actions.increment.type
+  const y: 'decrement' = counter.actions.decrement.type
+  // @ts-expect-error
+  const z: 'multiply' = counter.actions.multiply.type
 }
 
 /*
@@ -193,7 +237,7 @@ const value = actionCreators.anyKey
     }
   })
 
-  expectType<string>(counter.actions.incrementByStrLen('test').type)
+  expectType<'test/incrementByStrLen'>(counter.actions.incrementByStrLen('test').type)
   expectType<number>(counter.actions.incrementByStrLen('test').payload)
   expectType<string>(counter.actions.concatMetaStrLen('test').payload)
   expectType<number>(counter.actions.concatMetaStrLen('test').meta)
@@ -272,7 +316,7 @@ const value = actionCreators.anyKey
     name: 'counter',
     initialState: 0,
     reducers: {
-      increment(state, action: PayloadAction<number>) {
+      increment(state, action) {
         return state + action.payload
       },
       decrement: {

@@ -23,6 +23,10 @@ import { NoInfer } from './tsHelpers'
  */
 export type SliceActionCreator<P> = PayloadActionCreator<P>
 
+export type ActionsOfCaseReducersActions<T extends CaseReducerActions<SliceCaseReducers<any>>> = {
+  [Type in keyof T]: ReturnType<T[Type]>
+}[keyof T]
+
 /**
  * The return value of `createSlice`
  *
@@ -41,13 +45,13 @@ export interface Slice<
   /**
    * The slice's reducer.
    */
-  reducer: Reducer<State>
+  reducer: Reducer<State, ActionsOfCaseReducersActions<CaseReducerActions<CaseReducers, Name>>>
 
   /**
    * Action creators for the types of actions that are handled by the slice
    * reducer.
    */
-  actions: CaseReducerActions<CaseReducers>
+  actions: CaseReducerActions<CaseReducers, Name>
 
   /**
    * The individual case reducer functions that were passed in the `reducers` parameter.
@@ -159,10 +163,15 @@ export type SliceCaseReducers<State> = {
  *
  * @public
  */
-export type CaseReducerActions<CaseReducers extends SliceCaseReducers<any>> = {
-  [Type in keyof CaseReducers]: CaseReducers[Type] extends { prepare: any }
-    ? ActionCreatorForCaseReducerWithPrepare<CaseReducers[Type]>
-    : ActionCreatorForCaseReducer<CaseReducers[Type]>
+export type CaseReducerActions<
+  CaseReducers extends SliceCaseReducers<any>,
+  SliceName extends string = string
+> = {
+  [Type in string & keyof CaseReducers]: CaseReducers[Type] extends {
+    prepare: any
+  }
+    ? ActionCreatorForCaseReducerWithPrepare<CaseReducers[Type], `${SliceName}/${Type}`>
+    : ActionCreatorForCaseReducer<CaseReducers[Type], `${SliceName}/${Type}`>
 }
 
 /**
@@ -171,22 +180,23 @@ export type CaseReducerActions<CaseReducers extends SliceCaseReducers<any>> = {
  * @internal
  */
 type ActionCreatorForCaseReducerWithPrepare<
-  CR extends { prepare: any }
-> = _ActionCreatorWithPreparedPayload<CR['prepare'], string>
+  CR extends { prepare: any },
+  Type extends string = string
+> = _ActionCreatorWithPreparedPayload<CR['prepare'], Type>
 
 /**
  * Get a `PayloadActionCreator` type for a passed `CaseReducer`
  *
  * @internal
  */
-type ActionCreatorForCaseReducer<CR> = CR extends (
-  state: any,
-  action: infer Action
-) => any
+type ActionCreatorForCaseReducer<
+  CR,
+  Type extends string = string
+> = CR extends (state: any, action: infer Action) => any
   ? Action extends { payload: infer P }
-    ? PayloadActionCreator<P>
-    : ActionCreatorWithoutPayload
-  : ActionCreatorWithoutPayload
+    ? PayloadActionCreator<P, Type>
+    : ActionCreatorWithoutPayload<Type>
+  : ActionCreatorWithoutPayload<Type>
 
 /**
  * Extracts the CaseReducers out of a `reducers` object, even if they are

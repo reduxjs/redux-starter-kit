@@ -29,16 +29,17 @@ interface GetDefaultMiddlewareOptions {
 
 export type ThunkMiddlewareFor<
   S,
-  O extends GetDefaultMiddlewareOptions = {}
+  O extends GetDefaultMiddlewareOptions = {},
+  A extends AnyAction = AnyAction
 > = O extends {
   thunk: false
 }
   ? never
   : O extends { thunk: { extraArgument: infer E } }
-  ? ThunkMiddleware<S, AnyAction, E>
+  ? ThunkMiddleware<S, A, E>
   :
-      | ThunkMiddleware<S, AnyAction, null> //The ThunkMiddleware with a `null` ExtraArgument is here to provide backwards-compatibility.
-      | ThunkMiddleware<S, AnyAction>
+      | ThunkMiddleware<S, A, null> //The ThunkMiddleware with a `null` ExtraArgument is here to provide backwards-compatibility.
+      | ThunkMiddleware<S, A>
 
 export type CurriedGetDefaultMiddleware<S = any> = <
   O extends Partial<GetDefaultMiddlewareOptions> = {
