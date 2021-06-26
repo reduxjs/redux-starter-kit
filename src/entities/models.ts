@@ -148,12 +148,12 @@ export interface EntityStateAdapter<T> {
 /**
  * @public
  */
-export interface EntitySelectors<T, V> {
-  selectIds: (state: V) => EntityId[]
-  selectEntities: (state: V) => Dictionary<T>
-  selectAll: (state: V) => T[]
-  selectTotal: (state: V) => number
-  selectById: (state: V, id: EntityId) => T | undefined
+export interface EntitySelectors<T, V, ExtraArgs extends any[] = []> {
+  selectIds: (state: V, ...args: ExtraArgs) => EntityId[]
+  selectEntities: (state: V, ...args: ExtraArgs) => Dictionary<T>
+  selectAll: (state: V, ...args: ExtraArgs) => T[]
+  selectTotal: (state: V, ...args: ExtraArgs) => number
+  selectById: (state: V, id: EntityId, ...args: ExtraArgs) => T | undefined
 }
 
 /**

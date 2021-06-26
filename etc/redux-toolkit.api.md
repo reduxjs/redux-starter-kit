@@ -222,17 +222,17 @@ export interface EntityAdapter<T> extends EntityStateAdapter<T> {
 export type EntityId = number | string;
 
 // @public (undocumented)
-export interface EntitySelectors<T, V> {
+export interface EntitySelectors<T, V, ExtraArgs extends any[] = []> {
     // (undocumented)
-    selectAll: (state: V) => T[];
+    selectAll: (state: V, ...args: ExtraArgs) => T[];
     // (undocumented)
-    selectById: (state: V, id: EntityId) => T | undefined;
+    selectById: (state: V, id: EntityId, ...args: ExtraArgs) => T | undefined;
     // (undocumented)
-    selectEntities: (state: V) => Dictionary<T>;
+    selectEntities: (state: V, ...args: ExtraArgs) => Dictionary<T>;
     // (undocumented)
-    selectIds: (state: V) => EntityId[];
+    selectIds: (state: V, ...args: ExtraArgs) => EntityId[];
     // (undocumented)
-    selectTotal: (state: V) => number;
+    selectTotal: (state: V, ...args: ExtraArgs) => number;
 }
 
 // @public (undocumented)
