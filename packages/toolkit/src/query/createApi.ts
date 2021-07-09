@@ -1,16 +1,12 @@
 import type { Api, ApiContext, Module, ModuleName } from './apiTypes'
 import type { BaseQueryArg, BaseQueryFn } from './baseQueryTypes'
-import type {
-  SerializeQueryArgs} from './defaultSerializeQueryArgs';
-import {
-  defaultSerializeQueryArgs
-} from './defaultSerializeQueryArgs'
+import type { SerializeQueryArgs } from './defaultSerializeQueryArgs'
+import { defaultSerializeQueryArgs } from './defaultSerializeQueryArgs'
 import type {
   EndpointBuilder,
-  EndpointDefinitions} from './endpointDefinitions';
-import {
-  DefinitionType
+  EndpointDefinitions,
 } from './endpointDefinitions'
+import { DefinitionType } from './endpointDefinitions'
 
 export interface CreateApiOptions<
   BaseQuery extends BaseQueryFn,
@@ -100,10 +96,10 @@ export interface CreateApiOptions<
   ): Definitions
   /**
    * Defaults to `60` _(this value is in seconds)_. This is how long RTK Query will keep your data cached for **after** the last component unsubscribes. For example, if you query an endpoint, then unmount the component, then mount another component that makes the same request within the given time frame, the most recent value will be served from the cache.
-   * 
+   *
    * ```ts
    * // codeblock-meta title="keepUnusedDataFor example"
-   * 
+   *
    * import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
    * interface Post {
    *   id: number
@@ -150,6 +146,10 @@ export interface CreateApiOptions<
    * Note: requires [`setupListeners`](./setupListeners) to have been called.
    */
   refetchOnReconnect?: boolean
+  /**
+   *  Defaults to `false`. This setting allows to enable query execution on the server
+   */
+  ssr?: boolean
 }
 
 export type CreateApi<Modules extends ModuleName> = {
@@ -196,6 +196,7 @@ export function buildCreateApi<Modules extends [Module<any>, ...Module<any>[]]>(
       refetchOnMountOrArgChange: false,
       refetchOnFocus: false,
       refetchOnReconnect: false,
+      ssr: false,
       ...options,
       tagTypes: [...(options.tagTypes || [])],
     }
@@ -233,6 +234,7 @@ export function buildCreateApi<Modules extends [Module<any>, ...Module<any>[]]>(
         }
         return api
       },
+      ssr: optionsWithDefaults.ssr ? {} : undefined,
     } as Api<BaseQueryFn, {}, string, string, Modules[number]['name']>
 
     const initializedModules = modules.map((m) =>

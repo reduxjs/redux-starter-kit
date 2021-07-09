@@ -19,6 +19,7 @@ export type Api<BaseQuery extends BaseQueryFn, Definitions extends EndpointDefin
             [K in keyof NewDefinitions]?: Partial<NewDefinitions[K]> | ((definition: NewDefinitions[K]) => void);
         } : never;
     }): Api<BaseQuery, ReplaceTagTypes<Definitions, TagTypes | NewTagTypes>, ReducerPath, TagTypes | NewTagTypes, Enhancers>;
+    ssr?: boolean;
 };
 
 // @public (undocumented)
@@ -58,6 +59,7 @@ export interface CreateApiOptions<BaseQuery extends BaseQueryFn, Definitions ext
     refetchOnMountOrArgChange?: boolean | number;
     refetchOnReconnect?: boolean;
     serializeQueryArgs?: SerializeQueryArgs<BaseQueryArg<BaseQuery>>;
+    ssr?: boolean;
     tagTypes?: readonly TagTypes[];
 }
 

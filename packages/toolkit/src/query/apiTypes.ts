@@ -94,4 +94,5 @@ export type Api<
     TagTypes | NewTagTypes,
     Enhancers
   >
+  ssr: Record<string, any>
 }

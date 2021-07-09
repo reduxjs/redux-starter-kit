@@ -1,5 +1,6 @@
 import { coreModule, buildCreateApi, CreateApi } from '@reduxjs/toolkit/query'
 import { reactHooksModule, reactHooksModuleName } from './module'
+import { getDataFromTree } from './getDataFromTree'
 
 import type { MutationHooks, QueryHooks } from './buildHooks'
 import type {
@@ -21,4 +22,4 @@ const createApi = /* @__PURE__ */ buildCreateApi(
   reactHooksModule()
 )
 
-export { createApi, reactHooksModule }
+export { createApi, reactHooksModule, getDataFromTree }
