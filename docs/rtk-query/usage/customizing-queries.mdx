@@ -223,25 +223,29 @@ import { createApi, BaseQueryFn } from '@reduxjs/toolkit/query'
 import axios, { AxiosRequestConfig, AxiosError } from 'axios'
 
 // highlight-start
-const axiosBaseQuery = (
-  { baseUrl }: { baseUrl: string } = { baseUrl: '' }
-): BaseQueryFn<
-  {
-    url: string
-    method: AxiosRequestConfig['method']
-    data?: AxiosRequestConfig['data']
-  },
-  unknown,
-  unknown
-> => async ({ url, method, data }) => {
-  try {
-    const result = await axios({ url: baseUrl + url, method, data })
-    return { data: result.data }
-  } catch (axiosError) {
-    let err = axiosError as AxiosError
-    return { error: { status: err.response?.status, data: err.response?.data } }
+const axiosBaseQuery =
+  (
+    { baseUrl }: { baseUrl: string } = { baseUrl: '' }
+  ): BaseQueryFn<
+    {
+      url: string
+      method: AxiosRequestConfig['method']
+      data?: AxiosRequestConfig['data']
+    },
+    unknown,
+    unknown
+  > =>
+  async ({ url, method, data }) => {
+    try {
+      const result = await axios({ url: baseUrl + url, method, data })
+      return { data: result.data }
+    } catch (axiosError) {
+      let err = axiosError as AxiosError
+      return {
+        error: { status: err.response?.status, data: err.response?.data },
+      }
+    }
   }
-}
 // highlight-end
 
 const api = createApi({
@@ -270,21 +274,19 @@ import { createApi } from '@reduxjs/toolkit/query'
 import { request, gql, ClientError } from 'graphql-request'
 
 // highlight-start
-const graphqlBaseQuery = ({ baseUrl }: { baseUrl: string }) => async ({
-  body,
-}: {
-  body: string
-}) => {
-  try {
-    const result = await request(baseUrl, body)
-    return { data: result }
-  } catch (error) {
-    if (error instanceof ClientError) {
-      return { error: { status: error.response.status, data: error } }
+const graphqlBaseQuery =
+  ({ baseUrl }: { baseUrl: string }) =>
+  async ({ body }: { body: string }) => {
+    try {
+      const result = await request(baseUrl, body)
+      return { data: result }
+    } catch (error) {
+      if (error instanceof ClientError) {
+        return { error: { status: error.response.status, data: error } }
+      }
+      return { error: { status: 500, data: error } }
     }
-    return { error: { status: 500, data: error } }
   }
-}
 // highlight-end
 
 export const api = createApi({
@@ -581,6 +583,7 @@ const dynamicBaseQuery: BaseQueryFn<
     return {
       error: {
         status: 400,
+        statusText: 'Bad Request',
         data: 'No project ID received',
       },
     }

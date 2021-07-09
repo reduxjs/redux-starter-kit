@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import { MDXProvider } from '@mdx-js/react'
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext'
 import renderRoutes from '@docusaurus/renderRoutes'
@@ -18,95 +18,15 @@ import { translate } from '@docusaurus/Translate'
 import clsx from 'clsx'
 import styles from './styles.module.css'
 import { ThemeClassNames, docVersionSearchTag } from '@docusaurus/theme-common'
-
-function BraveWarning() {
-  const [isBrave, setIsBrave] = useState(false)
-
-  useEffect(() => {
-    const check = async () => {
-      return (navigator.brave && (await navigator.brave.isBrave())) || false
-    }
-
-    check()
-      .then((isBrave) => {
-        if (isBrave) {
-          setIsBrave(isBrave)
-        }
-      })
-      .catch(console.error)
-  }, [])
-
-  return isBrave && !localStorage.getItem('brave-warning-dismissed') ? (
-    <div className="admonition admonition-caution alert alert--warning">
-      <div className="admonition-heading">
-        <h5>
-          <span className="admonition-icon">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"
-              ></path>
-            </svg>
-          </span>
-          Brave Browser Warning
-        </h5>
-      </div>
-      <div className="admonition-content">
-        <p>
-          It appears that you're using Brave - that's awesome. We recommend
-          disabling shields for this domain as well as CodeSandbox in the event
-          that the examples do not load correctly.
-        </p>
-        <button
-          className="button button--warning button--md"
-          onClick={() => {
-            localStorage.setItem('brave-warning-dismissed', true)
-            setIsBrave(false)
-          }}
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-  ) : null
-}
-
-function getSidebar({ versionMetadata, currentDocRoute }) {
-  function addTrailingSlash(str) {
-    return str.endsWith('/') ? str : `${str}/`
-  }
-
-  function removeTrailingSlash(str) {
-    return str.endsWith('/') ? str.slice(0, -1) : str
-  }
-
-  const { permalinkToSidebar, docsSidebars } = versionMetadata // With/without trailingSlash, we should always be able to get the appropriate sidebar
-  // note: docs plugin permalinks currently never have trailing slashes
-  // trailingSlash is handled globally at the framework level, not plugin level
-
-  const sidebarName =
-    permalinkToSidebar[currentDocRoute.path] ||
-    permalinkToSidebar[addTrailingSlash(currentDocRoute.path)] ||
-    permalinkToSidebar[removeTrailingSlash(currentDocRoute.path)]
-  const sidebar = docsSidebars[sidebarName]
-  return {
-    sidebar,
-    sidebarName,
-  }
-}
+import BraveWarning from './BraveWarning'
 
 function DocPageContent({ currentDocRoute, versionMetadata, children }) {
   const { siteConfig, isClient } = useDocusaurusContext()
   const { pluginId, version } = versionMetadata
-  const { sidebarName, sidebar } = getSidebar({
-    versionMetadata,
-    currentDocRoute,
-  })
+  const sidebarName = currentDocRoute.sidebar
+  const sidebar = sidebarName
+    ? versionMetadata.docsSidebars[sidebarName]
+    : undefined
   const [hiddenSidebarContainer, setHiddenSidebarContainer] = useState(false)
   const [hiddenSidebar, setHiddenSidebar] = useState(false)
   const toggleSidebar = useCallback(() => {
@@ -152,9 +72,7 @@ function DocPageContent({ currentDocRoute, versionMetadata, children }) {
               }
               sidebar={sidebar}
               path={currentDocRoute.path}
-              sidebarCollapsible={
-                siteConfig.themeConfig?.sidebarCollapsible ?? true
-              }
+              sidebarCollapsible={siteConfig.themeConfig.sidebarCollapsible}
               onCollapse={toggleSidebar}
               isHidden={hiddenSidebar}
             />
@@ -227,7 +145,9 @@ function DocPage(props) {
       currentDocRoute={currentDocRoute}
       versionMetadata={versionMetadata}
     >
-      {renderRoutes(docRoutes)}
+      {renderRoutes(docRoutes, {
+        versionMetadata,
+      })}
     </DocPageContent>
   )
 }

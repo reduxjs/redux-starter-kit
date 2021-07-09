@@ -321,6 +321,7 @@ const api = createApi({
           return {
             error: {
               status: 500,
+              statusText: 'Internal Server Error',
               data: 'Invalid ID provided.',
             },
           }
