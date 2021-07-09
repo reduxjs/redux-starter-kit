@@ -5,19 +5,8 @@ import type {
   QueryArgFrom,
   ResultTypeFrom,
 } from '../endpointDefinitions'
-import type {
-  QueryThunkArg,
-  MutationThunkArg,
-  QueryThunk,
-  MutationThunk,
-} from './buildThunks'
-import type {
-  AnyAction,
-  AsyncThunk,
-  ThunkAction,
-  SerializedError,
-} from '@reduxjs/toolkit'
-import { unwrapResult } from '@reduxjs/toolkit'
+import type { QueryThunk, MutationThunk } from './buildThunks'
+import type { AnyAction, ThunkAction, SerializedError } from '@reduxjs/toolkit'
 import type { QuerySubState, SubscriptionOptions, RootState } from './apiState'
 import type { InternalSerializeQueryArgs } from '../defaultSerializeQueryArgs'
 import type { Api } from '../apiTypes'
@@ -65,6 +54,7 @@ export type QueryActionCreatorResult<
   unsubscribe(): void
   refetch(): void
   updateSubscriptionOptions(options: SubscriptionOptions): void
+  resolved: boolean
 }
 
 type StartMutationActionCreator<
@@ -118,6 +108,8 @@ export type MutationActionCreatorResult<
    * A unique string generated for the request sequence
    */
   requestId: string
+
+  resolved: boolean
   /**
    * A method to cancel the mutation promise. Note that this is not intended to prevent the mutation
    * that was fired off from reaching the server, but only to assist in handling the response.
@@ -191,18 +183,31 @@ export function buildInitiate({
   mutationThunk: MutationThunk
   api: Api<any, EndpointDefinitions, any, any>
 }) {
+  const runningQueries: Record<string, Promise<unknown> | undefined> = {}
+  const runningMutations: Record<string, Promise<unknown> | undefined> = {}
+
   const {
     unsubscribeQueryResult,
     unsubscribeMutationResult,
     updateSubscriptionOptions,
   } = api.internalActions
-  return { buildInitiateQuery, buildInitiateMutation }
+  return {
+    buildInitiateQuery,
+    buildInitiateMutation,
+    getRunningOperationPromises,
+  }
+
+  function getRunningOperationPromises() {
+    return Object.values(runningQueries)
+      .concat(Object.values(runningMutations))
+      .filter((t): t is Promise<unknown> => !!t)
+  }
 
   function middlewareWarning(getState: () => RootState<{}, string, string>) {
     if (process.env.NODE_ENV !== 'production') {
       if ((middlewareWarning as any).triggered) return
-      const registered = getState()[api.reducerPath]?.config
-        ?.middlewareRegistered
+      const registered =
+        getState()[api.reducerPath]?.config?.middlewareRegistered
       if (registered !== undefined) {
         ;(middlewareWarning as any).triggered = true
       }
@@ -219,93 +224,117 @@ Features like automatic cache collection, automatic refetching etc. will not be 
     endpointName: string,
     endpointDefinition: QueryDefinition<any, any, any, any>
   ) {
-    const queryAction: StartQueryActionCreator<any> = (
-      arg,
-      { subscribe = true, forceRefetch, subscriptionOptions } = {}
-    ) => (dispatch, getState) => {
-      const queryCacheKey = serializeQueryArgs({
-        queryArgs: arg,
-        endpointDefinition,
-        endpointName,
-      })
-      const thunk = queryThunk({
-        subscribe,
-        forceRefetch,
-        subscriptionOptions,
-        endpointName,
-        originalArgs: arg,
-        queryCacheKey,
-      })
-      const thunkResult = dispatch(thunk)
-      middlewareWarning(getState)
-      const { requestId, abort } = thunkResult
-      const statePromise = Object.assign(
-        thunkResult.then(() =>
-          (api.endpoints[endpointName] as ApiEndpointQuery<any, any>).select(
-            arg
-          )(getState())
-        ),
-        {
-          arg,
-          requestId,
+    const queryAction: StartQueryActionCreator<any> =
+      (arg, { subscribe = true, forceRefetch, subscriptionOptions } = {}) =>
+      (dispatch, getState) => {
+        const queryCacheKey = serializeQueryArgs({
+          queryArgs: arg,
+          endpointDefinition,
+          endpointName,
+        })
+        const thunk = queryThunk({
+          subscribe,
+          forceRefetch,
           subscriptionOptions,
-          abort,
-          refetch() {
-            dispatch(queryAction(arg, { subscribe: false, forceRefetch: true }))
-          },
-          unsubscribe() {
-            if (subscribe)
+          endpointName,
+          originalArgs: arg,
+          queryCacheKey,
+        })
+        const thunkResult = dispatch(thunk)
+        middlewareWarning(getState)
+        const { requestId, abort } = thunkResult
+        const statePromise = Object.assign(
+          Promise.all([runningQueries[queryCacheKey], thunkResult]).then(() =>
+            (api.endpoints[endpointName] as ApiEndpointQuery<any, any>).select(
+              arg
+            )(getState())
+          ),
+          {
+            arg,
+            requestId,
+            subscriptionOptions,
+            resolved: false,
+            abort,
+            refetch() {
               dispatch(
-                unsubscribeQueryResult({
-                  queryCacheKey,
+                queryAction(arg, { subscribe: false, forceRefetch: true })
+              )
+            },
+            unsubscribe() {
+              if (subscribe)
+                dispatch(
+                  unsubscribeQueryResult({
+                    queryCacheKey,
+                    requestId,
+                  })
+                )
+            },
+            updateSubscriptionOptions(options: SubscriptionOptions) {
+              statePromise.subscriptionOptions = options
+              dispatch(
+                updateSubscriptionOptions({
+                  endpointName,
                   requestId,
+                  queryCacheKey,
+                  options,
                 })
               )
-          },
-          updateSubscriptionOptions(options: SubscriptionOptions) {
-            statePromise.subscriptionOptions = options
-            dispatch(
-              updateSubscriptionOptions({
-                endpointName,
-                requestId,
-                queryCacheKey,
-                options,
-              })
-            )
-          },
+            },
+          }
+        )
+        statePromise.then(() => {
+          statePromise.resolved = true
+        })
+
+        if (!runningQueries[queryCacheKey]) {
+          runningQueries[queryCacheKey] = thunkResult
+          thunkResult.then(() => {
+            delete runningQueries[queryCacheKey]
+          })
         }
-      )
-      return statePromise
-    }
+
+        return statePromise
+      }
     return queryAction
   }
 
   function buildInitiateMutation(
-    endpointName: string,
-    definition: MutationDefinition<any, any, any, any>
+    endpointName: string
   ): StartMutationActionCreator<any> {
-    return (arg, { track = true } = {}) => (dispatch, getState) => {
-      const thunk = mutationThunk({
-        endpointName,
-        originalArgs: arg,
-        track,
-      })
-      const thunkResult = dispatch(thunk)
-      middlewareWarning(getState)
-      const { requestId, abort } = thunkResult
-      const returnValuePromise = thunkResult
-        .unwrap()
-        .then((data) => ({ data }))
-        .catch((error) => ({ error }))
-      return Object.assign(returnValuePromise, {
-        arg: thunkResult.arg,
-        requestId,
-        abort,
-        unwrap: thunkResult.unwrap,
-        unsubscribe() {
-          if (track) dispatch(unsubscribeMutationResult({ requestId }))
-        },
-      })
-    }
+    return (arg, { track = true } = {}) =>
+      (dispatch, getState) => {
+        const thunk = mutationThunk({
+          endpointName,
+          originalArgs: arg,
+          track,
+        })
+        const thunkResult = dispatch(thunk)
+        middlewareWarning(getState)
+        const { requestId, abort } = thunkResult
+        const returnValuePromise = thunkResult
+          .unwrap()
+          .then((data) => ({ data }))
+          .catch((error) => ({ error }))
+        const ret = Object.assign(returnValuePromise, {
+          arg: thunkResult.arg,
+          requestId,
+          resolved: false,
+          abort,
+          unwrap: thunkResult.unwrap,
+          unsubscribe() {
+            if (track) dispatch(unsubscribeMutationResult({ requestId }))
+          },
+        })
+        ret.then(() => {
+          ret.resolved = true
+        })
+
+        runningMutations[requestId] = thunkResult
+        thunkResult.then(() => {
+          delete runningMutations[requestId]
+        })
+
+        return ret
+      }
   }
 }

@@ -262,6 +262,7 @@ declare module '../apiTypes' {
           ? ApiEndpointMutation<Definitions[K], Definitions>
           : never
       }
+      getRunningOperationPromises: () => Array<Promise<unknown>>
     }
   }
 }
@@ -436,17 +437,23 @@ export const coreModule = (): Module<CoreModule> => ({
       reducerPath,
     })
 
-    const { buildInitiateQuery, buildInitiateMutation } = buildInitiate({
+    const {
+      buildInitiateQuery,
+      buildInitiateMutation,
+      getRunningOperationPromises,
+    } = buildInitiate({
       queryThunk,
       mutationThunk,
       api,
       serializeQueryArgs: serializeQueryArgs as any,
     })
 
+    api.getRunningOperationPromises = getRunningOperationPromises
+
     return {
       name: coreModuleName,
       injectEndpoint(endpointName, definition) {
-        const anyApi = (api as any) as Api<
+        const anyApi = api as any as Api<
           any,
           Record<string, any>,
           string,
@@ -468,7 +475,7 @@ export const coreModule = (): Module<CoreModule> => ({
             anyApi.endpoints[endpointName],
             {
               select: buildMutationSelector(),
-              initiate: buildInitiateMutation(endpointName, definition),
+              initiate: buildInitiateMutation(endpointName),
             },
             buildMatchThunkActions(mutationThunk, endpointName)
           )

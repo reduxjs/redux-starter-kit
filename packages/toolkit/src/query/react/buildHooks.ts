@@ -1,5 +1,6 @@
 import type { AnyAction, ThunkAction, ThunkDispatch } from '@reduxjs/toolkit'
 import { createSelector } from '@reduxjs/toolkit'
+import type { DependencyList } from 'react'
 import {
   useCallback,
   useEffect,
@@ -197,7 +198,10 @@ export type UseLazyQuerySubscription<
   D extends QueryDefinition<any, any, any, any>
 > = (
   options?: SubscriptionOptions
-) => [(arg: QueryArgFrom<D>) => void, QueryArgFrom<D> | UninitializedValue]
+) => readonly [
+  (arg: QueryArgFrom<D>) => void,
+  QueryArgFrom<D> | UninitializedValue
+]
 
 export type QueryStateSelector<
   R extends Record<string, any>,
@@ -296,59 +300,61 @@ export type UseQueryStateResult<
   R
 > = NoInfer<R>
 
-type UseQueryStateBaseResult<
-  D extends QueryDefinition<any, any, any, any>
-> = QuerySubState<D> & {
-  /**
-   * Query has not started yet.
-   */
-  isUninitialized: false
-  /**
-   * Query is currently loading for the first time. No data yet.
-   */
-  isLoading: false
-  /**
-   * Query is currently fetching, but might have data from an earlier request.
-   */
-  isFetching: false
-  /**
-   * Query has data from a successful load.
-   */
-  isSuccess: false
-  /**
-   * Query is currently in "error" state.
-   */
-  isError: false
-}
+type UseQueryStateBaseResult<D extends QueryDefinition<any, any, any, any>> =
+  QuerySubState<D> & {
+    /**
+     * Query has not started yet.
+     */
+    isUninitialized: false
+    /**
+     * Query is currently loading for the first time. No data yet.
+     */
+    isLoading: false
+    /**
+     * Query is currently fetching, but might have data from an earlier request.
+     */
+    isFetching: false
+    /**
+     * Query has data from a successful load.
+     */
+    isSuccess: false
+    /**
+     * Query is currently in "error" state.
+     */
+    isError: false
+  }
 
-type UseQueryStateDefaultResult<
-  D extends QueryDefinition<any, any, any, any>
-> = Id<
-  | Override<
-      Extract<
+type UseQueryStateDefaultResult<D extends QueryDefinition<any, any, any, any>> =
+  Id<
+    | Override<
+        Extract<
+          UseQueryStateBaseResult<D>,
+          { status: QueryStatus.uninitialized }
+        >,
+        { isUninitialized: true }
+      >
+    | Override<
         UseQueryStateBaseResult<D>,
-        { status: QueryStatus.uninitialized }
-      >,
-      { isUninitialized: true }
-    >
-  | Override<
-      UseQueryStateBaseResult<D>,
-      | { isLoading: true; isFetching: boolean; data: undefined }
-      | ({ isSuccess: true; isFetching: boolean; error: undefined } & Required<
-          Pick<UseQueryStateBaseResult<D>, 'data' | 'fulfilledTimeStamp'>
-        >)
-      | ({ isError: true } & Required<
-          Pick<UseQueryStateBaseResult<D>, 'error'>
-        >)
-    >
-> & {
-  /**
-   * @deprecated will be removed in the next version
-   * please use the `isLoading`, `isFetching`, `isSuccess`, `isError`
-   * and `isUninitialized` flags instead
-   */
-  status: QueryStatus
-}
+        | { isLoading: true; isFetching: boolean; data: undefined }
+        | ({
+            isSuccess: true
+            isFetching: boolean
+            error: undefined
+          } & Required<
+            Pick<UseQueryStateBaseResult<D>, 'data' | 'fulfilledTimeStamp'>
+          >)
+        | ({ isError: true } & Required<
+            Pick<UseQueryStateBaseResult<D>, 'error'>
+          >)
+      >
+  > & {
+    /**
+     * @deprecated will be removed in the next version
+     * please use the `isLoading`, `isFetching`, `isSuccess`, `isError`
+     * and `isUninitialized` flags instead
+     */
+    status: QueryStatus
+  }
 
 export type MutationStateSelector<
   R extends Record<string, any>,
@@ -381,7 +387,7 @@ export type UseMutation<D extends MutationDefinition<any, any, any, any>> = <
   R extends Record<string, any> = MutationResultSelectorResult<D>
 >(
   options?: UseMutationStateOptions<D, R>
-) => [
+) => readonly [
   (arg: QueryArgFrom<D>) => MutationActionCreatorResult<D>,
   UseMutationStateResult<D, R>
 ]
@@ -451,11 +457,26 @@ type GenericPrefetchThunk = (
  */
 export function buildHooks<Definitions extends EndpointDefinitions>({
   api,
-  moduleOptions: { batch, useDispatch, useSelector, useStore },
+  moduleOptions: {
+    batch,
+    useDispatch,
+    useSelector,
+    useStore,
+    unstable__sideEffectsInRender,
+    unstable__suspense,
+  },
 }: {
   api: Api<any, Definitions, any, any, CoreModule>
   moduleOptions: Required<ReactHooksModuleOptions>
 }) {
+  const usePossiblyImmediateEffect: (
+    effect: () => void | undefined,
+    deps?: DependencyList
+  ) => void =
+    unstable__sideEffectsInRender || unstable__suspense
+      ? (cb) => cb()
+      : useEffect
+
   return { buildQueryHooks, buildMutationHook, usePrefetch }
 
   function usePrefetch<EndpointName extends QueryKeys<Definitions>>(
@@ -502,7 +523,7 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
 
       const promiseRef = useRef<QueryActionCreatorResult<any>>()
 
-      useEffect(() => {
+      usePossiblyImmediateEffect((): void | undefined => {
         const lastPromise = promiseRef.current
 
         if (stableArg === skipToken) {
@@ -540,7 +561,7 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
         }
       }, [])
 
-      return useMemo(
+      const ret = useMemo(
         () => ({
           /**
            * A method to manually refetch data for the query
@@ -549,6 +570,12 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
         }),
         []
       )
+
+      if (unstable__suspense && promiseRef.current?.resolved === false) {
+        throw promiseRef.current
+      }
+
+      return ret
     }
 
     const useLazyQuerySubscription: UseLazyQuerySubscription<any> = ({
@@ -571,7 +598,7 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
         pollingInterval,
       })
 
-      useEffect(() => {
+      usePossiblyImmediateEffect(() => {
         const lastSubscriptionOptions = promiseRef.current?.subscriptionOptions
 
         if (stableSubscriptionOptions !== lastSubscriptionOptions) {
@@ -582,7 +609,7 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
       }, [stableSubscriptionOptions])
 
       const subscriptionOptionsRef = useRef(stableSubscriptionOptions)
-      useEffect(() => {
+      usePossiblyImmediateEffect(() => {
         subscriptionOptionsRef.current = stableSubscriptionOptions
       }, [stableSubscriptionOptions])
 
@@ -617,7 +644,13 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
         }
       }, [arg, trigger])
 
-      return useMemo(() => [trigger, arg], [trigger, arg])
+      const ret = useMemo(() => [trigger, arg] as const, [trigger, arg])
+
+      if (unstable__suspense && promiseRef.current?.resolved === false) {
+        throw promiseRef.current
+      }
+
+      return ret
     }
 
     const useQueryState: UseQueryState<any> = (
@@ -676,11 +709,10 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
         })
 
         const info = useMemo(() => ({ lastArg: arg }), [arg])
-        return useMemo(() => [trigger, queryStateResults, info], [
-          trigger,
-          queryStateResults,
-          info,
-        ])
+        return useMemo(
+          () => [trigger, queryStateResults, info],
+          [trigger, queryStateResults, info]
+        )
       },
       useQuery(arg, options) {
         const querySubscriptionResults = useQuerySubscription(arg, options)
@@ -741,10 +773,16 @@ export function buildHooks<Definitions extends EndpointDefinitions>({
 
       const currentState = useSelector(mutationSelector, shallowEqual)
 
-      return useMemo(() => [triggerMutation, currentState], [
-        triggerMutation,
-        currentState,
-      ])
+      const ret = useMemo(
+        () => [triggerMutation, currentState] as const,
+        [triggerMutation, currentState]
+      )
+
+      if (unstable__suspense && promiseRef.current?.resolved === false) {
+        throw promiseRef.current
+      }
+
+      return ret
     }
   }
 }
