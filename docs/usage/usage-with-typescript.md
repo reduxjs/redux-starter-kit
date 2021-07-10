@@ -62,6 +62,19 @@ export type RootState = ReturnType<typeof store.getState>
 export default store
 ```
 
+If you pass the reducers directly to `configureStore()` and do not define the root reducer explicitly, there is no reference to `rootReducer`. 
+Instead, you can refer to `store.getState`, in order to get the `State` type.
+
+```typescript
+import { configureStore } from '@reduxjs/toolkit'
+import rootReducer from './rootReducer'
+const store = configureStore({
+  reducer: rootReducer
+})
+export type RootState = ReturnType<typeof store.getState>
+```
+
+
 ### Getting the `Dispatch` type
 
 If you want to get the `Dispatch` type from your store, you can extract it after creating the store. It is recommended to give the type a different name like `AppDispatch` to prevent confusion, as the type name `Dispatch` is usually overused. You may also find it to be more convenient to export a hook like `useAppDispatch` shown below, then using it wherever you'd call `useDispatch`.
