@@ -15,7 +15,7 @@ This is good in some cases, because it gives you flexibility, but that flexibili
 
 As described in the [Quick Start](../introduction/getting-started.md) page, the goal of Redux Toolkit is to help simplify common Redux use cases. It is not intended to be a complete solution for everything you might want to do with Redux, but it should make a lot of the Redux-related code you need to write a lot simpler (or in some cases, eliminate some of the hand-written code entirely).
 
-Redux Toolkit exports several individual functions that you can use in your application, and adds dependencies on some other packages that are commonly used with Redux. This lets you decide how to use these in your own application, whether it be a brand new project or updating a large existing app.
+Redux Toolkit exports several individual functions that you can use in your application, and adds dependencies of some other packages that are commonly used with Redux. This lets you decide how to use these in your own application, whether it be a brand new project or updating a large existing app.
 
 Let's look at some of the ways that Redux Toolkit can help make your Redux-related code better.
 
@@ -1007,7 +1007,7 @@ export const usersAdapter = createEntityAdapter({
 `createEntityAdapter` provides a `sortComparer` argument that you can leverage to sort the collection of `ids` in state. This can be very useful for when you want to guarantee a sort order and your data doesn't come presorted.
 
 ```js
-// In this instance, our user data always has a primary key of `idx`
+// In this instance, our user data always has a primary key of `id`, so we do not need to provide `selectId`.
 const userData = {
   users: [
     { id: 1, first_name: 'Test' },
